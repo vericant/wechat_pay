@@ -12,7 +12,7 @@ Installation
 
 .. code-block:: sh
 
-    pip install git+https://github.com/vericant/wechat_pay.git@0.1.0#egg=wechat_pay
+    pip install git+https://github.com/vericant/wechat_pay.git@0.3.0#egg=wechat_pay
 
 Usage
 =====
@@ -59,6 +59,30 @@ Let's say you got it in the *xml* variable:
 
     if payment.validate_notification(xml):
         # do something
+
+Close order
+-----------
+
+Close the order. For following situations:
+  1. The payment is failed, merchant need to generate new order so close the
+     original order to avoid duplicated payments.
+  2. Over the time, merchant need to close the order.
+
+Note: The min gap time between request order and close the same order is 5
+minutes.
+
+.. code-block:: python
+
+    data = payment.close_order('<transaction no>')
+
+It will return a dictionary with a bunch of stuff if closed successfully.
+
+The **'return_code'** in dictionary describe whether it's success/fail.
+
+The **'err_code'** in dictionary describe the error code if it failed.
+
+Full explanation of how this works and error code details can be found in service
+documentation.
 
 References
 ==========

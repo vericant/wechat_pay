@@ -1,10 +1,10 @@
+from __future__ import unicode_literals
 from unittest import TestCase
 
 from wechat_pay import WechatPay, generate_random_string
 
 
 class WechatPayTest(TestCase):
-
     _app_id = 'app 1'
     _merchant_id = 'merchant 1'
     _payments_key = 'key 123'
@@ -52,9 +52,18 @@ class WechatPayTest(TestCase):
 
         self.assertEqual(params['sign'], signature)
 
+    def test_close_order_params(self):
+        trans_no = 'b6def355-5e79-4628-9c1b-89c1e9e90c79'
+        params = self._wp._prepare_close_order_params(trans_no)
+        self.assertEquals(
+            set(params.keys()),
+            set(['appid', 'mch_id', 'out_trade_no', 'nonce_str', 'sign'])
+        )
+        signature = self._wp._make_a_signature(params)
+        self.assertEqual(params['sign'], signature)
+
 
 class RandomStringTest(TestCase):
-
     def test_generate_random_string(self):
         length = 32
         result = generate_random_string(length)

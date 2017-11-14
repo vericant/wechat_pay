@@ -13,6 +13,7 @@ import requests
 
 
 PAYMENT_URL = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
+CLOSE_ORDER_URL = 'https://api.mch.weixin.qq.com/pay/closeorder'
 
 
 class WechatPay(object):
@@ -55,6 +56,29 @@ class WechatPay(object):
         """
         params = decode_xml(xml)
         return self._make_a_signature(params) == params.get('sign')
+
+    def close_order(self, out_trade_no):
+        """
+        Close the order.
+        Docs: https://pay.weixin.qq.com/wiki/doc/api/native.php?chapter=9_3
+        """
+        headers = {'Content-Type': 'application/xml'}
+        params = self._prepare_close_order_params(out_trade_no)
+        xml = xmltodict.unparse({'xml': params}).encode('utf-8')
+
+        response = requests.post(CLOSE_ORDER_URL, data=xml, headers=headers)
+        response.encoding = 'utf-8'
+        return decode_xml(response.text)
+
+    def _prepare_close_order_params(self, out_trade_no):
+        params = {
+            'appid': self._app_id,
+            'mch_id': self._merchant_id,
+            'out_trade_no': out_trade_no,
+            'nonce_str': generate_random_string(),
+        }
+        params['sign'] = self._make_a_signature(params)
+        return params
 
     def _prepare_order_params(self, product_name, out_trade_no, price):
         params = {
