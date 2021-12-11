@@ -68,6 +68,10 @@ class WechatPayV3(object):
                                         openid,
                                         attach)
 
+    def pay_sign(self, timestamp, nonce_str, package):
+        return self._sign_manager.pay_sign(self._private_key, self._app_id, timestamp, nonce_str,
+                                           package)
+
     __core = None
 
     @property

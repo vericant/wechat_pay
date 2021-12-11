@@ -61,3 +61,27 @@ class SignManager(object):
 
     def _verify_build_message_string(self, timestamp, nonce_str, response_body):
         return '\n'.join([timestamp, nonce_str, response_body, ''])
+
+    def pay_sign(self, private_key, app_id, timestamp, nonce_str, package):
+        """
+        Hashed signature string.
+        计算签名值
+        """
+        message_string = self._pay_sign_build_message_string(app_id, timestamp, nonce_str, package)
+        signer = PKCS1_v1_5.new(private_key)
+        signature = signer.sign(SHA256.new(message_string.encode('UTF-8')))
+        return base64.b64encode(signature)
+
+    def _pay_sign_build_message_string(self, app_id, timestamp, nonce_str, package):
+        """
+        Docs: https://pay.weixin.qq.com/wiki/doc/apiv3/apis/chapter3_1_4.shtml
+        构造签名串
+        签名串一共有四行，每一行为一个参数。行尾以\n（换行符，ASCII编码值为0x0A）结束，包括最后一行。
+        如果参数本身以\n结束，也需要附加一个\n
+
+            应用ID\n
+            时间戳\n
+            随机字符串\n
+            订单详情扩展字符串\n
+        """
+        return '\n'.join([app_id, timestamp, nonce_str, package, ''])

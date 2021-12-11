@@ -5,13 +5,14 @@ Wechat payments API v3 Core
 from __future__ import absolute_import, unicode_literals
 
 import json
-
+import logging
 import requests
 import urllib
 from .utils import generate_random_string, get_timestamp_string
 
 # need sign, need private key, merchant_id, serial_number
 
+log = logging.getLogger('django')
 WECHAT_PAY_V3_REQUEST_SCHEMA = 'WECHATPAY2-SHA256-RSA2048'
 
 
@@ -90,7 +91,9 @@ class Core(object):
         request_body = json.dumps(params)
 
         headers = self._set_request_header(method, relative_url, timestamp, nonce_str, request_body)
-        response = requests.post(url, headers=headers, data=params)
+        log.info('headers: {}'.format(headers))
+        log.info('paramss: {}'.format(params))
+        response = requests.post(url, headers=headers, data=request_body)
         return response
 
     def place_a_order(self, description, out_trade_no,
