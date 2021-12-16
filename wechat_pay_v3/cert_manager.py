@@ -23,12 +23,8 @@ log = logging.getLogger()
 # _wechat_pay_cert_path 有新的cert，send email to notify tech.
 # private_key_path, public_key_path
 class CertManager(object):
-    _client = None
     _certificates = []
     _wechat_pay_cert_path = None
-
-    def __init__(self, client):
-        self._client = client
 
     def load_certificate_by_bytes(self, pem_bytes):
         try:
@@ -81,7 +77,7 @@ class CertManager(object):
                     nonce_str and associated_data and ciphertext):
                 continue
 
-            cert_bytes = self._client.aes_decrypt(ciphertext, nonce_str, associated_data)
+            cert_bytes = self.aes_decrypt(ciphertext, nonce_str, associated_data)
             cert = self.load_certificate_by_bytes(cert_bytes)
             if not cert:
                 continue
@@ -106,7 +102,7 @@ class CertManager(object):
 
     def _fetch_all_certificates(self):
         relative_url = '/v3/certificates'
-        response = self._client.request_get(relative_url)
+        response = self.request_get(relative_url)
         if response.status_code != 200:
             log.error('get error when fetch all certificates')
             return None

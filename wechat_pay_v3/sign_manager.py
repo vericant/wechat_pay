@@ -1,25 +1,27 @@
 # coding=UTF-8
 """
-Wechat payments API v3 Signature Manager
+Wechat payments API v3 Signature Manager.
 """
 from __future__ import absolute_import, unicode_literals
 
 import base64
+import logging
 
 from Crypto.Signature import PKCS1_v1_5
 from Crypto.Hash import SHA256
 
+log = logging.getLogger('django')
 
-# public key, private key
+
 class SignManager(object):
-    def sign(self, private_key, method, url, timestamp, nonce_str, request_body):
+    def sign(self, method, url, timestamp, nonce_str, request_body):
         """
         Hashed signature string.
         计算签名值
         """
         message_string = self._sign_build_message_string(method, url, timestamp, nonce_str,
                                                          request_body)
-        signer = PKCS1_v1_5.new(private_key)
+        signer = PKCS1_v1_5.new(self._private_key)
         signature = signer.sign(SHA256.new(message_string.encode('UTF-8')))
         return base64.b64encode(signature)
 
@@ -46,29 +48,24 @@ class SignManager(object):
         return '\n'.join([method, url, timestamp, nonce_str, request_body, ''])
 
     # ##################### Verify
-    def verify(self, public_key, timestamp, nonce_str, response_body, signature):
+    def verify(self, timestamp, nonce_str, response_body, signature):
         message = self._verify_build_message_string(timestamp, nonce_str, response_body)
         hash_value = SHA256.new(message.encode())
-        verifier = PKCS1_v1_5.new(public_key)
+        verifier = PKCS1_v1_5.new(self._public_key)
         if isinstance(signature, str):
             signature = signature.encode()
-        if verifier.verify(hash_value, base64.decodebytes(signature)):
-            print("Success")
-            return True
-        else:
-            print("Failure")
-            return False
+        return verifier.verify(hash_value, base64.decodebytes(signature))
 
     def _verify_build_message_string(self, timestamp, nonce_str, response_body):
         return '\n'.join([timestamp, nonce_str, response_body, ''])
 
-    def pay_sign(self, private_key, app_id, timestamp, nonce_str, package):
+    def pay_sign(self, app_id, timestamp, nonce_str, package):
         """
         Hashed signature string.
         计算签名值
         """
         message_string = self._pay_sign_build_message_string(app_id, timestamp, nonce_str, package)
-        signer = PKCS1_v1_5.new(private_key)
+        signer = PKCS1_v1_5.new(self._private_key)
         signature = signer.sign(SHA256.new(message_string.encode('UTF-8')))
         return base64.b64encode(signature)
 
