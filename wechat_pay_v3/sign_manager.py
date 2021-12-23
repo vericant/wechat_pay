@@ -59,12 +59,13 @@ class SignManager(object):
     def _verify_build_message_string(self, timestamp, nonce_str, response_body):
         return '\n'.join([timestamp, nonce_str, response_body, ''])
 
-    def pay_sign(self, app_id, timestamp, nonce_str, package):
+    def pay_sign(self, timestamp, nonce_str, package):
         """
         Hashed signature string.
         计算签名值
         """
-        message_string = self._pay_sign_build_message_string(app_id, timestamp, nonce_str, package)
+        message_string = self._pay_sign_build_message_string(self._app_id,
+                                                             timestamp, nonce_str, package)
         signer = PKCS1_v1_5.new(self._private_key)
         signature = signer.sign(SHA256.new(message_string.encode('UTF-8')))
         return base64.b64encode(signature)
