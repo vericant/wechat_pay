@@ -12,7 +12,7 @@ Installation
 
 .. code-block:: sh
 
-    pip install git+https://github.com/vericant/wechat_pay.git@0.3.1#egg=wechat_pay
+    pip install git+https://github.com/vericant/wechat_pay.git@0.5#egg=wechat_pay
 
 Usage
 =====

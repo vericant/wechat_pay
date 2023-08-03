@@ -9,8 +9,9 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 install_requires = [
     'requests>=2.9.1',
-    'pycrypto==2.6.1',
-    'xmltodict==0.10.1',
+    # 'pycrypto==2.6.1',  # python 3.5/6
+    'pycryptodome',  # python 3.10
+    'xmltodict>=0.13.0',
     'cryptography>=2.5',
 ]
 
@@ -22,7 +23,7 @@ testing_requires = [
 
 setup(
     name='wechat_pay',
-    version='0.4beta5',
+    version='0.5',
     packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,
@@ -30,16 +31,16 @@ setup(
     description='Wechat payments module',
     long_description=README,
     url='https://www.vericant.com/',
-    author='murchik',
-    author_email='murchik@protonmail.com',
+    author='vericant',
+    author_email='tech@vericant.com',
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.10',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Internet :: WWW/HTTP',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
