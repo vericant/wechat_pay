@@ -17,6 +17,7 @@ GATE_WAY = 'https://api.mch.weixin.qq.com'
 
 class Core(object):
     _gate_way = GATE_WAY
+    _wechatpay_serial = None
 
     def _build_header_auth_token(self, method, relative_url, timestamp, nonce_str, request_body):
         # 2.签名信息
@@ -48,12 +49,16 @@ class Core(object):
         # 2.签名信息
         token = self._build_header_auth_token(method, relative_url, timestamp, nonce_str,
                                               request_body)
-        return {
+        headers = {
             'Authorization': '{} {}'.format(WECHAT_PAY_V3_REQUEST_SCHEMA, token),
             'User-Agent': 'wechatpay v3 api python sdk',
             'Content-Type': 'application/json',
             'Accept': 'application/json',
         }
+        # 微信支付公钥ID (PUB_KEY_ID_...), WeChat Pay signs the response with its public key.
+        if self._wechatpay_serial:
+            headers['Wechatpay-Serial'] = self._wechatpay_serial
+        return headers
 
     def _request_preparation(self, method, relative_url, request_body):
         url = urllib.parse.urljoin(self._gate_way, relative_url)
@@ -98,7 +103,12 @@ class Core(object):
         }
         response = self.request_post(url, data)
         log.info('Get response of place_a_order: {}'.format(response.content))
-        return response.json()
+        wechatpay_serial = response.headers.get('Wechatpay-Serial')
+        log.info('WeChat Pay v3 response status: %s, Wechatpay-Serial: %s, Request-ID: %s',
+                 response.status_code, wechatpay_serial, response.headers.get('Request-ID'))
+        result = response.json()
+        result['wechatpay_serial'] = wechatpay_serial
+        return result
 
     def close_order(self):
         pass

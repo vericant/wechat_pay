@@ -1,10 +1,12 @@
 from __future__ import absolute_import, unicode_literals
 
 from unittest import TestCase
+from unittest.mock import Mock, patch
 
 from wechat_pay_v3 import (
     WechatPayV3,
     WPV3Decrypt,
+    WPV3PreRequest,
     WPV3Verify,
 )
 
@@ -16,6 +18,7 @@ class WechatPayV3Test(TestCase):
     _private_key_path = 'tests/test-data/private.pem'
     _public_key_path = 'tests/test-data/public.pem'
     _api_v3_key = '7EVaSd0ZuyXZXy5eJpNb5CuXoEvAzqv3'
+    _wechatpay_serial = 'PUB_KEY_ID_0000000000000000000000000000000'
 
 
 class WechatPayV3SignTest(WechatPayV3Test):
@@ -109,3 +112,46 @@ class WechatPayV3CoreTest(WechatPayV3Test):
             token,
             'mchid="merchant 1",serial_no="None",nonce_str="a0ecabdce1d0cd1ffeff853618922d46",'
             'timestamp="1637893078",signature="{}"'.format(signature.decode()))
+
+    def test_set_request_header_without_wechatpay_serial(self):
+        wp = WPV3PreRequest(
+            self._merchant_id,
+            app_id=self._app_id,
+            serial_number=self._serial_number,
+            private_key_path=self._private_key_path,
+        )
+        headers = wp._set_request_header('GET', '/v3/test', '1637893078', 'nonce', '')
+        self.assertNotIn('Wechatpay-Serial', headers)
+
+    def test_set_request_header_with_wechatpay_serial(self):
+        wp = WPV3PreRequest(
+            self._merchant_id,
+            app_id=self._app_id,
+            serial_number=self._serial_number,
+            private_key_path=self._private_key_path,
+            wechatpay_serial=self._wechatpay_serial,
+        )
+        headers = wp._set_request_header('GET', '/v3/test', '1637893078', 'nonce', '')
+        self.assertEqual(headers['Wechatpay-Serial'], self._wechatpay_serial)
+
+    @patch('wechat_pay_v3.core.requests.post')
+    def test_place_a_order_returns_wechatpay_serial(self, mock_post):
+        mock_post.return_value = Mock(
+            status_code=200,
+            content=b'{"prepay_id": "wx2021"}',
+            headers={'Wechatpay-Serial': self._wechatpay_serial, 'Request-ID': 'req-1'},
+            json=Mock(return_value={'prepay_id': 'wx2021'}),
+        )
+        wp = WPV3PreRequest(
+            self._merchant_id,
+            app_id=self._app_id,
+            serial_number=self._serial_number,
+            private_key_path=self._private_key_path,
+            wechatpay_serial=self._wechatpay_serial,
+        )
+        result = wp.place_a_order('desc', 'vericant_test_001', '2021-12-11T19:49:41+08:00',
+                                  'https://example.com/notify', 1, 'openid 1')
+        self.assertEqual(result, {'prepay_id': 'wx2021',
+                                  'wechatpay_serial': self._wechatpay_serial})
+        self.assertEqual(mock_post.call_args.kwargs['headers']['Wechatpay-Serial'],
+                         self._wechatpay_serial)

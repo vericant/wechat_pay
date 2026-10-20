@@ -2,7 +2,7 @@ from __future__ import unicode_literals, absolute_import
 import os
 from setuptools import find_packages, setup
 
-with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
+with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8') as readme:
     README = readme.read()
 
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
@@ -23,13 +23,14 @@ testing_requires = [
 
 setup(
     name='wechat_pay',
-    version='0.5',
+    version='1.0',
     packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,
     license='GNU General Public License v3 (GPLv3)',
     description='Wechat payments module',
     long_description=README,
+    long_description_content_type='text/markdown',
     url='https://www.vericant.com/',
     author='vericant',
     author_email='tech@vericant.com',

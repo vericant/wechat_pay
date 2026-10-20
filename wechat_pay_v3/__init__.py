@@ -13,6 +13,7 @@ class WechatPayV3(Core, SignManager, CertManager, EncryptManager):
     _private_key_path = None  # sign, request header, sensitive_field_decrypt
     _public_key_path = None  # verify, sensitive_field_encrypt
     _api_v3_key = None  # decrypt received notification data
+    _wechatpay_serial = None  # 微信支付公钥ID, request header Wechatpay-Serial.
 
     def __init__(self, merchant_id,
                  app_id=None,
@@ -20,6 +21,7 @@ class WechatPayV3(Core, SignManager, CertManager, EncryptManager):
                  serial_number=None,
                  private_key_path=None,
                  public_key_path=None,
+                 wechatpay_serial=None,
                  ):
         self._merchant_id = merchant_id
         self._app_id = app_id
@@ -27,6 +29,7 @@ class WechatPayV3(Core, SignManager, CertManager, EncryptManager):
         self._private_key_path = private_key_path
         self._public_key_path = public_key_path
         self._api_v3_key = api_v3_key
+        self._wechatpay_serial = wechatpay_serial
 
     __private_key = None
 
@@ -42,12 +45,14 @@ class WechatPayV3(Core, SignManager, CertManager, EncryptManager):
 
 
 class WPV3PreRequest(WechatPayV3):
-    def __init__(self, merchant_id, app_id, serial_number, private_key_path):
+    def __init__(self, merchant_id, app_id, serial_number, private_key_path,
+                 wechatpay_serial=None):
         super(WPV3PreRequest, self).__init__(
             merchant_id,
             app_id=app_id,
             serial_number=serial_number,
             private_key_path=private_key_path,
+            wechatpay_serial=wechatpay_serial,
         )
 
 
