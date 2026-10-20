@@ -13,6 +13,7 @@ from .utils import generate_random_string, get_timestamp_string
 log = logging.getLogger('django')
 WECHAT_PAY_V3_REQUEST_SCHEMA = 'WECHATPAY2-SHA256-RSA2048'
 GATE_WAY = 'https://api.mch.weixin.qq.com'
+REQUEST_TIMEOUT = 10  # seconds
 
 
 class Core(object):
@@ -75,12 +76,12 @@ class Core(object):
 
     def request_get(self, relative_url):
         url, headers = self._request_preparation('GET', relative_url, '')
-        return requests.get(url, headers=headers)
+        return requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
 
     def request_post(self, relative_url, params):
         request_body = json.dumps(params)
         url, headers = self._request_preparation('POST', relative_url, request_body)
-        return requests.post(url, headers=headers, data=request_body)
+        return requests.post(url, headers=headers, data=request_body, timeout=REQUEST_TIMEOUT)
 
     def place_a_order(self, description, out_trade_no, time_expire, notify_url,
                       amount_in_cents, openid, attach=None):

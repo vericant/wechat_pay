@@ -5,6 +5,7 @@ Wechat payments API v3 Signature Manager.
 from __future__ import absolute_import, unicode_literals
 
 import base64
+import binascii
 import logging
 
 from Crypto.Signature import PKCS1_v1_5
@@ -54,7 +55,12 @@ class SignManager(object):
         verifier = PKCS1_v1_5.new(self._public_key)
         if isinstance(signature, str):
             signature = signature.encode()
-        return verifier.verify(hash_value, base64.decodebytes(signature))
+        try:
+            signature_bytes = base64.b64decode(signature, validate=True)
+        except (binascii.Error, ValueError):
+            log.warning('Invalid base64 signature: %s', signature)
+            return False
+        return verifier.verify(hash_value, signature_bytes)
 
     def _verify_build_message_string(self, timestamp, nonce_str, response_body):
         return '\n'.join([timestamp, nonce_str, response_body, ''])

@@ -23,7 +23,7 @@ testing_requires = [
 
 setup(
     name='wechat_pay',
-    version='1.0',
+    version='1.1',
     packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,

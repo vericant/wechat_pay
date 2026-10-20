@@ -8,7 +8,7 @@ WeChat Pay for Vericant:
 ## Installation
 
 ```sh
-pip install git+https://github.com/vericant/wechat_pay.git@1.0#egg=wechat_pay
+pip install git+https://github.com/vericant/wechat_pay.git@1.1#egg=wechat_pay
 ```
 
 ## APIv2 Native payments (`wechat_pay`)
@@ -138,7 +138,7 @@ See [平台证书切换为微信支付公钥](https://pay.weixin.qq.com/doc/v3/m
 ## Tests
 
 ```sh
-pytest tests/tests.py tests/wechat_pay_v3_tests.py
+pytest tests
 ```
 
 ## References

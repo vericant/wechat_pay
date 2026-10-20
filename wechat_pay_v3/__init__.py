@@ -35,13 +35,17 @@ class WechatPayV3(Core, SignManager, CertManager, EncryptManager):
 
     @property
     def _private_key(self):
-        return self.__private_key or self.load_private_key(self._private_key_path)
+        if self.__private_key is None:
+            self.__private_key = self.load_private_key(self._private_key_path)
+        return self.__private_key
 
     __public_key = None
 
     @property
     def _public_key(self):
-        return self.__public_key or self.load_public_key(self._public_key_path)
+        if self.__public_key is None:
+            self.__public_key = self.load_public_key(self._public_key_path)
+        return self.__public_key
 
 
 class WPV3PreRequest(WechatPayV3):

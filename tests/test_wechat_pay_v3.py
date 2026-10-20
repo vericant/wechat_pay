@@ -1,7 +1,11 @@
 from __future__ import absolute_import, unicode_literals
 
+import base64
 from unittest import TestCase
 from unittest.mock import Mock, patch
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 
 from wechat_pay_v3 import (
     WechatPayV3,
@@ -9,6 +13,7 @@ from wechat_pay_v3 import (
     WPV3PreRequest,
     WPV3Verify,
 )
+from wechat_pay_v3.core import REQUEST_TIMEOUT
 
 
 class WechatPayV3Test(TestCase):
@@ -62,8 +67,46 @@ class WechatPayV3SignTest(WechatPayV3Test):
         result = wp.verify(timestamp, nonce_str, response_body, signature)
         self.assertTrue(result)
 
+    def test_verify_invalid_base64_signature(self):
+        wp = WPV3Verify(
+            self._merchant_id,
+            public_key_path=self._public_key_path,
+        )
+        for signature in ('abc', 'not base64 at all!', b'abc', ''):
+            self.assertFalse(wp.verify('1637893078', 'nonce', 'body', signature))
+
+    def test_keys_are_loaded_once(self):
+        wp = WechatPayV3(
+            self._merchant_id,
+            private_key_path=self._private_key_path,
+            public_key_path=self._public_key_path,
+        )
+        with patch.object(WechatPayV3, 'load_private_key',
+                          wraps=wp.load_private_key) as mock_load_private, \
+                patch.object(WechatPayV3, 'load_public_key',
+                             wraps=wp.load_public_key) as mock_load_public:
+            for _ in range(2):
+                signature = wp.sign('GET', '/v3/test', '1637893078', 'nonce', '')
+                wp.verify('1637893078', 'nonce', 'body', signature)
+        self.assertEqual(mock_load_private.call_count, 1)
+        self.assertEqual(mock_load_public.call_count, 1)
+
 
 class WechatPayV3EncryptTest(WechatPayV3Test):
+    def test_sensitive_field_encrypt_uses_oaep(self):
+        wp = WechatPayV3(
+            self._merchant_id,
+            public_key_path=self._public_key_path,
+        )
+        ciphertext = wp.sensitive_field_encrypt('test encryption')
+
+        with open(self._private_key_path, 'rb') as f:
+            private_key = serialization.load_pem_private_key(f.read(), password=None)
+        oaep = padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                            algorithm=hashes.SHA1(), label=None)
+        self.assertEqual(private_key.decrypt(base64.b64decode(ciphertext), oaep),
+                         b'test encryption')
+
     def test_sensitive_field_encrypt_decrypt(self):
         wp = WechatPayV3(
             self._merchant_id,
@@ -155,3 +198,4 @@ class WechatPayV3CoreTest(WechatPayV3Test):
                                   'wechatpay_serial': self._wechatpay_serial})
         self.assertEqual(mock_post.call_args.kwargs['headers']['Wechatpay-Serial'],
                          self._wechatpay_serial)
+        self.assertEqual(mock_post.call_args.kwargs['timeout'], REQUEST_TIMEOUT)

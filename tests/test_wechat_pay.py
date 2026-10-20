@@ -1,7 +1,8 @@
 from __future__ import unicode_literals
 from unittest import TestCase
+from unittest.mock import Mock, patch
 
-from wechat_pay import WechatPay, generate_random_string
+from wechat_pay import REQUEST_TIMEOUT, WechatPay, generate_random_string
 
 
 class WechatPayTest(TestCase):
@@ -55,12 +56,23 @@ class WechatPayTest(TestCase):
     def test_close_order_params(self):
         trans_no = 'b6def355-5e79-4628-9c1b-89c1e9e90c79'
         params = self._wp._prepare_close_order_params(trans_no)
-        self.assertEquals(
+        self.assertEqual(
             set(params.keys()),
             set(['appid', 'mch_id', 'out_trade_no', 'nonce_str', 'sign'])
         )
         signature = self._wp._make_a_signature(params)
         self.assertEqual(params['sign'], signature)
+
+    @patch('wechat_pay.requests.post')
+    def test_requests_have_timeout(self, mock_post):
+        mock_post.return_value = Mock(text='<xml><return_code>SUCCESS</return_code></xml>')
+
+        self._wp.retrieve_prepay_data('test product', 'trans_1', '1')
+        self._wp.close_order('trans_1')
+
+        self.assertEqual(mock_post.call_count, 2)
+        for call in mock_post.call_args_list:
+            self.assertEqual(call.kwargs['timeout'], REQUEST_TIMEOUT)
 
 
 class RandomStringTest(TestCase):

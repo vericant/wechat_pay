@@ -14,6 +14,7 @@ import requests
 
 PAYMENT_URL = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
 CLOSE_ORDER_URL = 'https://api.mch.weixin.qq.com/pay/closeorder'
+REQUEST_TIMEOUT = 10  # seconds
 
 
 class WechatPay(object):
@@ -46,7 +47,8 @@ class WechatPay(object):
         params = self._prepare_order_params(product_name, out_trade_no, price)
         xml = xmltodict.unparse({'xml': params}).encode('utf-8')
 
-        response = requests.post(PAYMENT_URL, data=xml, headers=headers)
+        response = requests.post(PAYMENT_URL, data=xml, headers=headers,
+                                 timeout=REQUEST_TIMEOUT)
         response.encoding = 'utf-8'
         return decode_xml(response.text)
 
@@ -66,7 +68,8 @@ class WechatPay(object):
         params = self._prepare_close_order_params(out_trade_no)
         xml = xmltodict.unparse({'xml': params}).encode('utf-8')
 
-        response = requests.post(CLOSE_ORDER_URL, data=xml, headers=headers)
+        response = requests.post(CLOSE_ORDER_URL, data=xml, headers=headers,
+                                 timeout=REQUEST_TIMEOUT)
         response.encoding = 'utf-8'
         return decode_xml(response.text)
 
