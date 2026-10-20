@@ -1,19 +1,23 @@
-from __future__ import absolute_import, unicode_literals
-
 import base64
+import datetime
+import tempfile
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
+from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.x509.oid import NameOID
 
 from wechat_pay_v3 import (
     WechatPayV3,
     WPV3Decrypt,
     WPV3PreRequest,
     WPV3Verify,
+    is_timestamp_fresh,
 )
 from wechat_pay_v3.core import REQUEST_TIMEOUT
+from wechat_pay_v3.keys import load_public_key
 
 
 class WechatPayV3Test(TestCase):
@@ -199,3 +203,62 @@ class WechatPayV3CoreTest(WechatPayV3Test):
         self.assertEqual(mock_post.call_args.kwargs['headers']['Wechatpay-Serial'],
                          self._wechatpay_serial)
         self.assertEqual(mock_post.call_args.kwargs['timeout'], REQUEST_TIMEOUT)
+
+    @patch('wechat_pay_v3.core.requests.post')
+    def test_request_logs_hide_authorization_and_body(self, mock_post):
+        mock_post.return_value = Mock(
+            status_code=200, content=b'{}', headers={},
+            json=Mock(return_value={}),
+        )
+        wp = WPV3PreRequest(
+            self._merchant_id,
+            app_id=self._app_id,
+            serial_number=self._serial_number,
+            private_key_path=self._private_key_path,
+        )
+        with self.assertLogs('wechat_pay_v3', level='INFO') as logs:
+            wp.place_a_order('desc', 'vericant_test_001', '2021-12-11T19:49:41+08:00',
+                             'https://example.com/notify', 1, 'openid secret')
+        output = '\n'.join(logs.output)
+        self.assertIn('POST /v3/pay/transactions/jsapi', output)
+        self.assertNotIn('Authorization', output)
+        self.assertNotIn('WECHATPAY2-SHA256-RSA2048', output)
+        self.assertNotIn('openid secret', output)
+
+
+class LoadPublicKeyTest(WechatPayV3Test):
+    def test_loads_public_key_from_certificate(self):
+        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, 'Tenpay.com sign')])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        certificate = (
+            x509.CertificateBuilder()
+            .subject_name(name).issuer_name(name)
+            .public_key(private_key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now).not_valid_after(now + datetime.timedelta(days=1))
+            .sign(private_key, hashes.SHA256())
+        )
+        with tempfile.NamedTemporaryFile(suffix='.pem') as f:
+            f.write(certificate.public_bytes(serialization.Encoding.PEM))
+            f.flush()
+            public_key = load_public_key(f.name)
+        self.assertEqual(public_key.public_numbers(), private_key.public_key().public_numbers())
+
+    def test_loads_spki_public_key(self):
+        public_key = load_public_key(self._public_key_path)
+        self.assertEqual(public_key.key_size, 2048)
+
+
+class IsTimestampFreshTest(TestCase):
+    def test_is_timestamp_fresh(self):
+        now = 1731465272
+        self.assertTrue(is_timestamp_fresh(str(now), now=now))
+        self.assertTrue(is_timestamp_fresh(str(now - 300), now=now))
+        self.assertTrue(is_timestamp_fresh(str(now + 300), now=now))
+        self.assertFalse(is_timestamp_fresh(str(now - 301), now=now))
+        self.assertFalse(is_timestamp_fresh(str(now), max_age_seconds=10, now=now + 11))
+
+    def test_invalid_timestamp(self):
+        for timestamp in ('', None, 'abc'):
+            self.assertFalse(is_timestamp_fresh(timestamp))

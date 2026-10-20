@@ -2,19 +2,23 @@
 """
 Wechat payments API v3 Signature Manager.
 """
-from __future__ import absolute_import, unicode_literals
-
 import base64
 import binascii
 import logging
 
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.Hash import SHA256
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
-log = logging.getLogger('django')
+log = logging.getLogger(__name__)
 
 
 class SignManager(object):
+    def _rsa_sign(self, message_string):
+        signature = self._private_key.sign(message_string.encode('UTF-8'),
+                                           padding.PKCS1v15(), hashes.SHA256())
+        return base64.b64encode(signature)
+
     def sign(self, method, url, timestamp, nonce_str, request_body):
         """
         Hashed signature string.
@@ -22,9 +26,7 @@ class SignManager(object):
         """
         message_string = self._sign_build_message_string(method, url, timestamp, nonce_str,
                                                          request_body)
-        signer = PKCS1_v1_5.new(self._private_key)
-        signature = signer.sign(SHA256.new(message_string.encode('UTF-8')))
-        return base64.b64encode(signature)
+        return self._rsa_sign(message_string)
 
     def _sign_build_message_string(self, method, url, timestamp, nonce_str, request_body):
         """
@@ -51,8 +53,6 @@ class SignManager(object):
     # ##################### Verify
     def verify(self, timestamp, nonce_str, response_body, signature):
         message = self._verify_build_message_string(timestamp, nonce_str, response_body)
-        hash_value = SHA256.new(message.encode())
-        verifier = PKCS1_v1_5.new(self._public_key)
         if isinstance(signature, str):
             signature = signature.encode()
         try:
@@ -60,7 +60,12 @@ class SignManager(object):
         except (binascii.Error, ValueError):
             log.warning('Invalid base64 signature: %s', signature)
             return False
-        return verifier.verify(hash_value, signature_bytes)
+        try:
+            self._public_key.verify(signature_bytes, message.encode(),
+                                    padding.PKCS1v15(), hashes.SHA256())
+        except InvalidSignature:
+            return False
+        return True
 
     def _verify_build_message_string(self, timestamp, nonce_str, response_body):
         return '\n'.join([timestamp, nonce_str, response_body, ''])
@@ -72,9 +77,7 @@ class SignManager(object):
         """
         message_string = self._pay_sign_build_message_string(self._app_id,
                                                              timestamp, nonce_str, package)
-        signer = PKCS1_v1_5.new(self._private_key)
-        signature = signer.sign(SHA256.new(message_string.encode('UTF-8')))
-        return base64.b64encode(signature)
+        return self._rsa_sign(message_string)
 
     def _pay_sign_build_message_string(self, app_id, timestamp, nonce_str, package):
         """

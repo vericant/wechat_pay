@@ -2,15 +2,15 @@
 """
 Wechat payments API v3 Core.
 """
-from __future__ import absolute_import, unicode_literals
-
 import json
 import logging
-import requests
 import urllib
+
+import requests
+
 from .utils import generate_random_string, get_timestamp_string
 
-log = logging.getLogger('django')
+log = logging.getLogger(__name__)
 WECHAT_PAY_V3_REQUEST_SCHEMA = 'WECHATPAY2-SHA256-RSA2048'
 GATE_WAY = 'https://api.mch.weixin.qq.com'
 REQUEST_TIMEOUT = 10  # seconds
@@ -67,11 +67,11 @@ class Core(object):
         nonce_str = generate_random_string()
 
         headers = self._set_request_header(method, relative_url, timestamp, nonce_str, request_body)
-        # For Debug:
-        # headers_string = ' '.join(["--header '{}: {}'".format(k, v) for k, v in headers.items()])
-        # print("curl --location --request GET '{}' {}".format(url, headers_string))
-        log.info('headers: {}'.format(headers))
-        log.info('request_body: {}'.format(request_body))
+        # The Authorization token is never logged, and the body (it has the payer openid)
+        # only at DEBUG.
+        log.info('WeChat Pay v3 request: %s %s, Wechatpay-Serial: %s',
+                 method, relative_url, headers.get('Wechatpay-Serial'))
+        log.debug('WeChat Pay v3 request body: %s', request_body)
         return url, headers
 
     def request_get(self, relative_url):
@@ -103,13 +103,10 @@ class Core(object):
             'attach': attach,
         }
         response = self.request_post(url, data)
-        log.info('Get response of place_a_order: {}'.format(response.content))
+        log.info('Get response of place_a_order: %s', response.content)
         wechatpay_serial = response.headers.get('Wechatpay-Serial')
         log.info('WeChat Pay v3 response status: %s, Wechatpay-Serial: %s, Request-ID: %s',
                  response.status_code, wechatpay_serial, response.headers.get('Request-ID'))
         result = response.json()
         result['wechatpay_serial'] = wechatpay_serial
         return result
-
-    def close_order(self):
-        pass

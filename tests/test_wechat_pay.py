@@ -1,6 +1,7 @@
-from __future__ import unicode_literals
 from unittest import TestCase
 from unittest.mock import Mock, patch
+
+import xmltodict
 
 from wechat_pay import REQUEST_TIMEOUT, WechatPay, generate_random_string
 
@@ -73,6 +74,21 @@ class WechatPayTest(TestCase):
         self.assertEqual(mock_post.call_count, 2)
         for call in mock_post.call_args_list:
             self.assertEqual(call.kwargs['timeout'], REQUEST_TIMEOUT)
+
+    def make_notification_xml(self, sign):
+        params = {'return_code': 'SUCCESS', 'out_trade_no': 'trans_1'}
+        if sign is not None:
+            params['sign'] = sign
+        return xmltodict.unparse({'xml': params})
+
+    def test_validate_notification(self):
+        params = {'return_code': 'SUCCESS', 'out_trade_no': 'trans_1'}
+        xml = self.make_notification_xml(self._wp._make_a_signature(params))
+        self.assertTrue(self._wp.validate_notification(xml))
+
+    def test_validate_notification_wrong_or_missing_sign(self):
+        self.assertFalse(self._wp.validate_notification(self.make_notification_xml('WRONG')))
+        self.assertFalse(self._wp.validate_notification(self.make_notification_xml(None)))
 
 
 class RandomStringTest(TestCase):

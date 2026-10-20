@@ -1,12 +1,11 @@
-from __future__ import absolute_import, unicode_literals
-
+from . import keys
 from .core import Core
-from .sign_manager import SignManager
-from .cert_manager import CertManager
 from .encrypt_manager import EncryptManager
+from .sign_manager import SignManager
+from .utils import is_timestamp_fresh  # noqa: F401
 
 
-class WechatPayV3(Core, SignManager, CertManager, EncryptManager):
+class WechatPayV3(Core, SignManager, EncryptManager):
     _merchant_id = None
     _app_id = None  # place a order, pay
     _serial_number = None  # request header, place a order.
@@ -46,6 +45,12 @@ class WechatPayV3(Core, SignManager, CertManager, EncryptManager):
         if self.__public_key is None:
             self.__public_key = self.load_public_key(self._public_key_path)
         return self.__public_key
+
+    def load_private_key(self, private_key_path):
+        return keys.load_private_key(private_key_path)
+
+    def load_public_key(self, public_key_path):
+        return keys.load_public_key(public_key_path)
 
 
 class WPV3PreRequest(WechatPayV3):

@@ -7,9 +7,25 @@ WeChat Pay for Vericant:
 
 ## Installation
 
+Requires Python 3.10+. Install a release tag (`git tag` lists them; the version
+in `setup.py` matches the latest tag):
+
 ```sh
-pip install git+https://github.com/vericant/wechat_pay.git@1.1#egg=wechat_pay
+pip install git+https://github.com/vericant/wechat_pay.git@<tag>#egg=wechat_pay
 ```
+
+## Logging
+
+Both packages log to their own loggers, `wechat_pay` and `wechat_pay_v3`.
+Configure them in your application to keep their INFO messages, for example in
+Django `LOGGING['loggers']`:
+
+```python
+'wechat_pay_v3': {'handlers': ['file'], 'level': 'INFO'},
+```
+
+The `Authorization` header is never logged. Request bodies, which contain the
+payer's openid, are only logged at DEBUG.
 
 ## APIv2 Native payments (`wechat_pay`)
 
@@ -122,11 +138,17 @@ The callback's `Wechatpay-Serial` header tells which key signed it:
 `PUB_KEY_ID_...` for the WeChat Pay public key, otherwise the platform
 certificate serial. Pick the matching public key file:
 
+`public_key_path` can be the WeChat Pay public key (`pub_key.pem`), a platform
+certificate public key, or the platform certificate itself.
+
+Use `is_timestamp_fresh` to reject callbacks whose `Wechatpay-Timestamp` is more
+than 5 minutes from now, which blocks replayed requests.
+
 ```python
-from wechat_pay_v3 import WPV3Decrypt, WPV3Verify
+from wechat_pay_v3 import WPV3Decrypt, WPV3Verify, is_timestamp_fresh
 
 wp = WPV3Verify('<merchant id>', public_key_path='/path/to/pub_key.pem')
-if wp.verify(timestamp, nonce_str, request_body, signature):
+if is_timestamp_fresh(timestamp) and wp.verify(timestamp, nonce_str, request_body, signature):
     data = WPV3Decrypt('<merchant id>', api_v3_key='<APIv3 key>').aes_decrypt(
         ciphertext, nonce, associated_data)
 ```

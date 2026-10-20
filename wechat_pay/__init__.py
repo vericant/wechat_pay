@@ -2,14 +2,13 @@
 Wechat payments
 """
 
-from __future__ import unicode_literals
-
 import hashlib
+import hmac
+import secrets
 import string
-import random
 
-import xmltodict
 import requests
+import xmltodict
 
 
 PAYMENT_URL = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
@@ -57,7 +56,10 @@ class WechatPay(object):
         Notification comes signed in the same manner we're signing our requests.
         """
         params = decode_xml(xml)
-        return self._make_a_signature(params) == params.get('sign')
+        sign = params.get('sign')
+        if not sign:
+            return False
+        return hmac.compare_digest(self._make_a_signature(params), sign)
 
     def close_order(self, out_trade_no):
         """
@@ -127,7 +129,7 @@ class WechatPay(object):
 
 def generate_random_string(length=32):
     alphabet = string.ascii_uppercase + string.digits
-    return ''.join(random.choice(alphabet) for _ in range(length))
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
 
 
 def decode_xml(xml):

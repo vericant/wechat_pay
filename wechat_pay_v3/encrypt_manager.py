@@ -2,21 +2,23 @@
 """
 Wechat payments API v3 Encryption Manager.
 """
-from __future__ import absolute_import, unicode_literals
-
 import base64
 
-from Crypto.Cipher import PKCS1_OAEP
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+# APIv3 敏感信息加解密 requires RSA/ECB/OAEPWithSHA-1AndMGF1Padding.
+OAEP_PADDING = padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA1()),
+                            algorithm=hashes.SHA1(), label=None)
 
 
 class EncryptManager(object):
-    # 敏感信息加解密, APIv3 requires RSA/ECB/OAEPWithSHA-1AndMGF1Padding.
     def sensitive_field_decrypt(self, cipherbyte):
         if isinstance(cipherbyte, str):
             cipherbyte = cipherbyte.encode()
-        cipher = PKCS1_OAEP.new(self._private_key)
-        decrypted_message = cipher.decrypt(base64.b64decode(cipherbyte))
+        decrypted_message = self._private_key.decrypt(base64.b64decode(cipherbyte),
+                                                      OAEP_PADDING)
         return decrypted_message.decode()
 
     def sensitive_field_encrypt(self, message):
@@ -24,8 +26,7 @@ class EncryptManager(object):
         # 证书序列号包含在请求HTTP头部的Wechatpay-Serial
         if isinstance(message, str):
             message = message.encode()
-        encrypter = PKCS1_OAEP.new(self._public_key)
-        cipherbyte = encrypter.encrypt(message)
+        cipherbyte = self._public_key.encrypt(message, OAEP_PADDING)
         return base64.b64encode(cipherbyte)
 
     def aes_decrypt(self, cipherbyte, nonce_str, associated_data):
